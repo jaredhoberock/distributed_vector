@@ -3,7 +3,7 @@
 #include <thrust/iterator/iterator_adaptor.h>
 #include <thrust/iterator/counting_iterator.h>
 
-namespace detail
+namespace detail_
 {
 
 
@@ -41,6 +41,7 @@ template<typename SegmentIterator>
 {
   private:
     typedef SegmentIterator segment_iterator;
+    typedef typename thrust::iterator_value<SegmentIterator>::type segment_type;
     typedef typename distributed_iterator_base<SegmentIterator>::type super_t;
 
     friend class thrust::experimental::iterator_core_access;
@@ -50,6 +51,13 @@ template<typename SegmentIterator>
 
     __host__ __device__
     distributed_iterator(){}
+
+    __host__ __device__
+    distributed_iterator(const distributed_iterator &other)
+      : super_t(other.base()),
+        m_segments(other.m_segments),
+        m_segment_size(other.m_segment_size)
+    {}
 
     template<typename OtherSegmentIterator, typename Size>
     __host__ __device__
@@ -67,14 +75,21 @@ template<typename SegmentIterator>
     {
       const difference_type i = *super_t::base_reference();
 
-      // which segment are we int?
+      // which segment are we in?
       difference_type segment_idx = i / m_segment_size;
 
       // which element within the segment are we?
       difference_type remainder = i - (m_segment_size * segment_idx);
 
       // dereference twice
-      return m_segments[segment_idx][remainder];
+
+      // first, get the segment
+      // assign it to a temporary to handle the case where m_segments[segment_idx]
+      // returns a wrapped reference
+      const segment_type &segment = m_segments[segment_idx];
+
+      // index into the segment
+      return segment[remainder];
     }
 
   private:
