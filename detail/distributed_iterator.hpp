@@ -42,14 +42,12 @@ template<typename SegmentIterator>
   private:
     typedef SegmentIterator segment_iterator;
     typedef typename distributed_iterator_base<SegmentIterator>::type super_t;
-    typedef typename super_t::difference_type difference_type;
 
     friend class thrust::experimental::iterator_core_access;
 
-    segment_iterator m_segments;
-    difference_type m_segment_size;
-
   public:
+    typedef typename super_t::difference_type difference_type;
+
     __host__ __device__
     distributed_iterator(){}
 
@@ -58,7 +56,7 @@ template<typename SegmentIterator>
     distributed_iterator(OtherSegmentIterator segments_first, 
                          Size segment_size,
                          difference_type initial_index = 0)
-      : super_t(initial_index),
+      : super_t(thrust::counting_iterator<unsigned int>(initial_index)),
         m_segments(segments_first),
         m_segment_size(segment_size)
     {}
@@ -67,7 +65,7 @@ template<typename SegmentIterator>
     __host__ __device__
     typename super_t::reference dereference() const
     {
-      const difference_type i = *base_reference();
+      const difference_type i = *super_t::base_reference();
 
       // which segment are we int?
       difference_type segment_idx = i / m_segment_size;
@@ -78,6 +76,10 @@ template<typename SegmentIterator>
       // dereference twice
       return m_segments[segment_idx][remainder];
     }
+
+  private:
+    segment_iterator m_segments;
+    difference_type m_segment_size;
 };
 
 
